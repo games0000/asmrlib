@@ -826,4 +826,9 @@ def serve_cover(rj_id):
     return "", 404
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    import os
+    # Render 会自动注入 PORT 环境变量，本地没有时默认 5000 方便你调试
+    port = int(os.environ.get("PORT", 5000))
+    # 必须指定 host="0.0.0.0" 才能让外网（你的手机/浏览器）访问
+    # 在云端建议关闭 debug=True
+    app.run(host="0.0.0.0", port=port, debug=False)
