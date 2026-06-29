@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-app.py - DLsite 收藏浏览器
+app.py - DLsite 收藏浏览器 (已补全弹窗联动筛选功能)
 依赖: pip install flask
 用法: python app.py  → 打开 http://localhost:5000
 """
@@ -31,6 +31,7 @@ HTML = """
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+
 :root {
   --bg:        #0c0c11;
   --surface:   #13131a;
@@ -339,12 +340,12 @@ body {
   padding-top: 80px;
 }
 
-/* ─── Modal ──────────────────────────────────────── */
+/* ─── Modal ─────────────────── */
 #modal-bg {
   display: none;
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.65);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(5px);
   z-index: 200;
   align-items: center;
   justify-content: center;
@@ -355,19 +356,19 @@ body {
   background: var(--surface);
   border: 1px solid var(--border-h);
   border-radius: 14px;
-  width: min(580px, 92vw);
-  max-height: 86vh;
+  width: min(720px, 94vw); 
+  max-height: 88vh;
   overflow-y: auto;
   position: relative;
   animation: modal-in .18s ease;
 }
 @keyframes modal-in {
   from { opacity: 0; transform: scale(.96) translateY(8px); }
-  to   { opacity: 1; transform: scale(1)  translateY(0); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
 }
 
 #modal-close {
-  position: absolute; top: 14px; right: 14px; z-index: 1;
+  position: absolute; top: 14px; right: 14px; z-index: 10;
   width: 28px; height: 28px;
   background: var(--card);
   border: 1px solid var(--border);
@@ -380,46 +381,78 @@ body {
 }
 #modal-close:hover { border-color: var(--border-h); color: var(--text); }
 
-.modal-cover {
-  width: 100%;
-  border-radius: 12px 12px 0 0;
-  overflow: hidden;
-  background: var(--card);
-  max-height: 240px;
+.modal-grid-layout {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
 }
-.modal-cover img {
-  width: 100%;
-  max-height: 240px;
-  object-fit: cover;
-  display: block;
+@media (max-width: 576px) {
+  .modal-grid-layout { flex-direction: column; align-items: center; }
 }
 
-.modal-body { padding: 20px 22px 24px; }
+.modal-cover-side {
+  width: 220px;
+  min-width: 220px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.modal-cover-side img {
+  width: 100%;
+  height: auto;
+  max-height: 380px;
+  object-fit: contain; 
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.modal-info-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.modal-body { padding: 24px 24px 24px; }
 
 .modal-rj {
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--accent);
   letter-spacing: 0.1em;
   margin-bottom: 6px;
+  font-family: 'Space Grotesk', monospace;
 }
 .modal-title {
   font-size: 15px;
   font-weight: 500;
   line-height: 1.5;
   margin-bottom: 14px;
+  color: var(--text);
 }
 
 .modal-info {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 6px 12px;
+  gap: 8px 12px;
   font-size: 12px;
-  margin-bottom: 14px;
   align-items: baseline;
 }
 .modal-info-label { color: var(--muted); white-space: nowrap; }
 .modal-info-val   { color: var(--text); }
+
+/* 让联动的内容在视觉上有明显的点击反馈 */
+.link-click {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.12s;
+}
+.link-click:hover {
+  color: #c084fc;
+}
 
 .modal-age-badge {
   display: inline-block;
@@ -445,18 +478,21 @@ body {
   font-size: 11px;
   padding: 3px 9px;
   color: var(--sub);
-  transition: border-color .12s;
+  cursor: pointer;
+  transition: all .12s;
 }
-.modal-tag:hover { border-color: var(--border-h); color: var(--text); }
+.modal-tag:hover { border-color: var(--accent); color: var(--accent); }
 
 .modal-desc {
   font-size: 12px;
   line-height: 1.8;
   color: var(--sub);
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
   white-space: pre-wrap;
+  max-height: 280px;
+  overflow-y: auto;
 }
 </style>
 </head>
@@ -561,17 +597,17 @@ async function init() {
 function buildAgeFilters() {
   const ages = [...new Set(ALL.map(w => w.age_rating).filter(Boolean))];
   document.getElementById('age-filters').innerHTML = ages.map(a =>
-    `<button class="pill age-pill-${a}" onclick="toggleAge('${a}',this)">${a}</button>`
+    `<button class="pill age-pill-${a}" data-value="${a}" onclick="toggleAge('${a}',this)">${a}</button>`
   ).join('');
 }
 function buildCVFilters(cvs) {
   document.getElementById('cv-filters').innerHTML = cvs.map(c =>
-    `<button class="pill" onclick="toggleCV('${esc(c.name_jp)}',this)">${esc(c.name_jp)}</button>`
+    `<button class="pill" data-value="${esc(c.name_jp)}" onclick="toggleCV('${esc(c.name_jp)}',this)">${esc(c.name_jp)}</button>`
   ).join('');
 }
 function buildTagFilters(tags) {
   document.getElementById('tag-filters').innerHTML = tags.map(t =>
-    `<button class="pill" onclick="toggleTag('${esc(t.name_jp)}',this)">${esc(TAG_JP2CN[t.name_jp]||t.name_jp)}</button>`
+    `<button class="pill" data-value="${esc(t.name_jp)}" onclick="toggleTag('${esc(t.name_jp)}',this)">${esc(TAG_JP2CN[t.name_jp]||t.name_jp)}</button>`
   ).join('');
 }
 
@@ -580,25 +616,52 @@ function toggleCV(v, b)  { toggle(activeCVs,  v, b); filter(); }
 function toggleTag(v, b) { toggle(activeTags, v, b); filter(); }
 function toggle(set, v, btn) {
   set.has(v) ? set.delete(v) : set.add(v);
-  btn.classList.toggle('on');
+  if(btn) btn.classList.toggle('on', set.has(v));
+}
+
+// 🌐 联动筛选的核心处理逻辑
+function linkSearchCircle(circleName) {
+  closeModal();
+  document.getElementById('search').value = circleName;
+  filter();
+}
+
+function linkToggleCV(cvName) {
+  closeModal();
+  // 联动逻辑：清空通用搜索框，直接在左侧点亮对应的声优标签
+  document.getElementById('search').value = "";
+  
+  // 查找左侧对应的声优按钮，模拟点击
+  const btn = document.querySelector(`#cv-filters .pill[data-value="${cvName}"]`);
+  if (btn) {
+    if (!activeCVs.has(cvName)) toggleCV(cvName, btn);
+  } else {
+    // 如果不在常驻推荐前列，退化为文本框模糊搜索
+    document.getElementById('search').value = cvName;
+    filter();
+  }
+}
+
+function linkToggleTag(tagName) {
+  closeModal();
+  const btn = document.querySelector(`#tag-filters .pill[data-value="${tagName}"]`);
+  if (btn) {
+    if (!activeTags.has(tagName)) toggleTag(tagName, btn);
+  }
 }
 
 function filter() {
   const q = document.getElementById('search').value.toLowerCase();
   const res = ALL.filter(w => {
-    // 1. 关键词搜索过滤 (保持原样)
     if (q && !w.title?.toLowerCase().includes(q)
           && !w.rj_id?.toLowerCase().includes(q)
+          && !w.circle?.toLowerCase().includes(q) // 增强通用搜索：支持搜索社团名字
           && !(w.cvs||[]).some(c => c.toLowerCase().includes(q))) return false;
           
-    // 2. 声优过滤 (这里仍保持 OR 关系：满足其中一个声优即可)
     if (activeCVs.size && !(w.cvs||[]).some(c => activeCVs.has(c)))   return false;
     
-    // 3. 标签过滤 (关键修改：从 .some 变成 .every,实现 AND 关系)
-    // 意为：选中的每一个标签(t)，都必须存在于该作品的标签列表(w.tags)中
     if (activeTags.size && ![...activeTags].every(t => (w.tags||[]).includes(t))) return false;
     
-    // 4. 分级过滤 (保持原样)
     if (activeAges.size && !activeAges.has(w.age_rating))               return false;
     
     return true;
@@ -653,30 +716,44 @@ function applyBlur(img) {
 async function showDetail(rj_id) {
   const w = await fetch('/api/work/' + rj_id).then(r => r.json());
   const ageCls = ageClass(w.age_rating);
+  
+  // 拼接声优 HTML (绑定点击事件)
+  const cvsHtml = (w.cvs || []).map(cv => 
+    `<span class="link-click" onclick="linkToggleCV('${esc(cv)}')">${esc(cv)}</span>`
+  ).join(' ') || '—';
+
+  // 拼接标签 HTML (绑定点击事件)
+  const tagsHtml = (w.tags || []).map(tag => 
+    `<span class="modal-tag" onclick="linkToggleTag('${esc(tag)}')">${esc(TAG_JP2CN[tag]||tag)}</span>`
+  ).join('');
+
   document.getElementById('modal-content').innerHTML = `
-    <div class="modal-cover">
-      <img src="${w.cover_path ? '/cover/'+encodeURIComponent(rj_id) : ''}"
-           onerror="this.parentElement.style.display='none'">
-    </div>
     <div class="modal-body">
-      <div class="modal-rj">${w.rj_id}</div>
-      <div class="modal-title">${esc(w.title)}</div>
-      <div class="modal-info">
-        <span class="modal-info-label">社团</span>
-        <span class="modal-info-val">${esc(w.circle||'—')}</span>
-        <span class="modal-info-label">声优</span>
-        <span class="modal-info-val">${(w.cvs||[]).map(esc).join('　') || '—'}</span>
-        ${w.release_date ? `<span class="modal-info-label">发售日</span>
-        <span class="modal-info-val">${esc(w.release_date)}</span>` : ''}
-        <span class="modal-info-label">分级</span>
-        <span class="modal-info-val">
-          <span class="modal-age-badge ${ageCls}">${w.age_rating||'—'}</span>
-        </span>
+      <div class="modal-grid-layout">
+        <div class="modal-cover-side">
+          <img src="${w.cover_path ? '/cover/'+encodeURIComponent(rj_id) : ''}"
+               onerror="this.parentElement.style.display='none'">
+        </div>
+        
+        <div class="modal-info-side">
+          <div class="modal-rj">${w.rj_id}</div>
+          <div class="modal-title">${esc(w.title)}</div>
+          <div class="modal-info">
+            <span class="modal-info-label">社团</span>
+            <span class="modal-info-val link-click" onclick="linkSearchCircle('${esc(w.circle||'')}')">${esc(w.circle||'—')}</span>
+            <span class="modal-info-label">声优</span>
+            <span class="modal-info-val">${cvsHtml}</span>
+            ${w.release_date ? `<span class="modal-info-label">发售日</span>
+            <span class="modal-info-val">${esc(w.release_date)}</span>` : ''}
+            <span class="modal-info-label">分级</span>
+            <span class="modal-info-val">
+              <span class="modal-age-badge ${ageCls}">${w.age_rating||'—'}</span>
+            </span>
+          </div>
+        </div>
       </div>
-      ${(w.tags||[]).length ? `
-      <div class="modal-tags">
-        ${(w.tags||[]).map(tag => `<span class="modal-tag">${esc(TAG_JP2CN[tag]||tag)}</span>`).join('')}
-      </div>` : ''}
+      
+      ${(w.tags||[]).length ? `<div class="modal-tags">${tagsHtml}</div>` : ''}
       ${w.description ? `<div class="modal-desc">${esc(w.description)}</div>` : ''}
     </div>
   `;
@@ -725,7 +802,7 @@ const TAG_JP2CN = {
   "メイド": "女仆", "先生": "老师", "生徒": "学生", "学生": "学生",
   "後輩": "后辈", "先輩": "前辈", "先輩/後輩": "前辈/后辈", "上司": "上司", "部下": "下属",
   "ツンデレ": "傲娇", "ヤンデレ": "病娇", "触ナー": "丧系",
-  "クール": "冷淡", "天然": "天然呆", "強気": "强势", "クール攻め": "高冷攻",
+  "クール": "冷淡", "天然": "天然呆", "強气": "强势", "クール攻め": "高冷攻",
   "年上": "年上", "年下": "年下", "年下攻め": "年下攻",
   "人外": "非人类", "人外娘/モンスター娘": "人外娘/魔物娘", "獣耳": "兽耳", "エルフ": "精灵",
   "サキュバス": "魅魔", "幽霊": "幽灵", "吸血鬼": "吸血鬼", "お嬢様": "大小姐",
@@ -749,7 +826,7 @@ const TAG_JP2CN = {
   "工作サポ": "自慰辅助", 
   "オナサポ": "自慰辅助", 
 
-  // 音声特性 (音声の技術的特徴)
+  // 音声特性 (音声の技術的特征)
   "立体音響": "立体音效", "高音質": "高音质", "BGMなし": "无BGM",
   "テキスト付き": "附文本", "日本語": "日语", "中国語": "中文"
 };
@@ -836,8 +913,5 @@ def serve_cover(rj_id):
 
 if __name__ == "__main__":
     import os
-    # Render 会自动注入 PORT 环境变量，本地没有时默认 5000 方便你调试
     port = int(os.environ.get("PORT", 5000))
-    # 必须指定 host="0.0.0.0" 才能让外网（你的手机/浏览器）访问
-    # 在云端建议关闭 debug=True
     app.run(host="0.0.0.0", port=port, debug=False)
