@@ -27,7 +27,7 @@ HTML = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>音声ライブラリ</title>
+<title>Dlsite-同人音声</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -586,12 +586,21 @@ function toggle(set, v, btn) {
 function filter() {
   const q = document.getElementById('search').value.toLowerCase();
   const res = ALL.filter(w => {
+    // 1. 关键词搜索过滤 (保持原样)
     if (q && !w.title?.toLowerCase().includes(q)
           && !w.rj_id?.toLowerCase().includes(q)
           && !(w.cvs||[]).some(c => c.toLowerCase().includes(q))) return false;
-    if (activeCVs.size  && !(w.cvs||[]).some(c => activeCVs.has(c)))   return false;
-    if (activeTags.size && !(w.tags||[]).some(t => activeTags.has(t)))  return false;
+          
+    // 2. 声优过滤 (这里仍保持 OR 关系：满足其中一个声优即可)
+    if (activeCVs.size && !(w.cvs||[]).some(c => activeCVs.has(c)))   return false;
+    
+    // 3. 标签过滤 (关键修改：从 .some 变成 .every,实现 AND 关系)
+    // 意为：选中的每一个标签(t)，都必须存在于该作品的标签列表(w.tags)中
+    if (activeTags.size && ![...activeTags].every(t => (w.tags||[]).includes(t))) return false;
+    
+    // 4. 分级过滤 (保持原样)
     if (activeAges.size && !activeAges.has(w.age_rating))               return false;
+    
     return true;
   });
   render(res);
