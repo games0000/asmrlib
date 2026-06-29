@@ -167,7 +167,7 @@ body {
 
 .age-pill-全年齢.on { background: #065f46; border-color: var(--all); color: var(--all); }
 .age-pill-R-15.on   { background: #7c2d12; border-color: var(--r15); color: var(--r15); }
-.age-pill-R1.on   { background: #7f1d1d; border-color: var(--r18); color: var(--r18); }
+.age-pill-R18.on   { background: #7f1d1d; border-color: var(--r18); color: var(--r18); }
 
 /* ─── Main ───────────────────────────────────────── */
 #main {
@@ -465,7 +465,7 @@ body {
 <aside id="sidebar">
   <div id="sidebar-header">
     <div class="logo">
-      <span class="logo-mark">声库</span>
+      <span class="logo-mark">Dlsite-ASMR</span>
       <span class="logo-sub">Collection</span>
     </div>
     <div class="search-wrap">
