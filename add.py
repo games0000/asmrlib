@@ -413,7 +413,7 @@ if __name__ == "__main__":
     rj_queue   = []
 
     if BATCH_MODE == "list":
-        target_list =[ "RJ01512640"]
+        target_list =[ "RJ01591722","RJ01503719","RJ01611432","RJ01592893","RJ01588205","RJ01615036"]
  # ← 单个时只改顶部 RJ_ID；批量时在这里填列表
         for item in target_list:
             cleaned = item.strip().upper()
